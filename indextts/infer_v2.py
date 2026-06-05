@@ -1,7 +1,6 @@
 import os
 from subprocess import CalledProcessError
 
-os.environ['HF_HUB_CACHE'] = './checkpoints/hf_cache'
 import json
 import re
 import time
@@ -34,6 +33,14 @@ import safetensors
 from transformers import SeamlessM4TFeatureExtractor
 import random
 import torch.nn.functional as F
+
+
+def get_hf_cache_dir(model_dir):
+    configured_cache = os.environ.get("HF_HUB_CACHE")
+    if configured_cache:
+        return os.path.abspath(configured_cache)
+    return os.path.abspath(os.path.join(model_dir, "hf_cache"))
+
 
 class IndexTTS2:
     def __init__(
@@ -75,6 +82,8 @@ class IndexTTS2:
 
         self.cfg = OmegaConf.load(cfg_path)
         self.model_dir = model_dir
+        self.hf_cache_dir = get_hf_cache_dir(self.model_dir)
+        os.environ.setdefault("HF_HUB_CACHE", self.hf_cache_dir)
         self.dtype = torch.float16 if self.use_fp16 else None
         self.stop_mel_token = self.cfg.gpt.stop_mel_token
         self.use_accel = use_accel
@@ -112,16 +121,25 @@ class IndexTTS2:
                 print(f"{e!r}")
                 self.use_cuda_kernel = False
 
-        self.extract_features = SeamlessM4TFeatureExtractor.from_pretrained("facebook/w2v-bert-2.0")
+        self.extract_features = SeamlessM4TFeatureExtractor.from_pretrained(
+            "facebook/w2v-bert-2.0",
+            cache_dir=self.hf_cache_dir,
+        )
         self.semantic_model, self.semantic_mean, self.semantic_std = build_semantic_model(
-            os.path.join(self.model_dir, self.cfg.w2v_stat))
+            os.path.join(self.model_dir, self.cfg.w2v_stat),
+            cache_dir=self.hf_cache_dir,
+        )
         self.semantic_model = self.semantic_model.to(self.device)
         self.semantic_model.eval()
         self.semantic_mean = self.semantic_mean.to(self.device)
         self.semantic_std = self.semantic_std.to(self.device)
 
         semantic_codec = build_semantic_codec(self.cfg.semantic_codec)
-        semantic_code_ckpt = hf_hub_download("amphion/MaskGCT", filename="semantic_codec/model.safetensors")
+        semantic_code_ckpt = hf_hub_download(
+            "amphion/MaskGCT",
+            filename="semantic_codec/model.safetensors",
+            cache_dir=self.hf_cache_dir,
+        )
         safetensors.torch.load_model(semantic_codec, semantic_code_ckpt)
         self.semantic_codec = semantic_codec.to(self.device)
         self.semantic_codec.eval()
@@ -151,7 +169,9 @@ class IndexTTS2:
 
         # load campplus_model
         campplus_ckpt_path = hf_hub_download(
-            "funasr/campplus", filename="campplus_cn_common.bin"
+            "funasr/campplus",
+            filename="campplus_cn_common.bin",
+            cache_dir=self.hf_cache_dir,
         )
         campplus_model = CAMPPlus(feat_dim=80, embedding_size=192)
         campplus_model.load_state_dict(torch.load(campplus_ckpt_path, map_location="cpu"))
@@ -160,7 +180,11 @@ class IndexTTS2:
         print(">> campplus_model weights restored from:", campplus_ckpt_path)
 
         bigvgan_name = self.cfg.vocoder.name
-        self.bigvgan = bigvgan.BigVGAN.from_pretrained(bigvgan_name, use_cuda_kernel=self.use_cuda_kernel)
+        self.bigvgan = bigvgan.BigVGAN.from_pretrained(
+            bigvgan_name,
+            use_cuda_kernel=self.use_cuda_kernel,
+            cache_dir=self.hf_cache_dir,
+        )
         self.bigvgan = self.bigvgan.to(self.device)
         self.bigvgan.remove_weight_norm()
         self.bigvgan.eval()

@@ -1,6 +1,6 @@
 [project]
 name = "indextts2-cli"
-version = "1.0.0"
+version = "1.0.1"
 description = "Unofficial fork of IndexTTS2 for text-to-speech command-line usage"
 authors = [{ name = "CouplingArtist" }]
 license = "LicenseRef-Bilibili-IndexTTS"

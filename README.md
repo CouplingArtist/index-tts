@@ -43,18 +43,18 @@
 
 ## 安装
 
-本项目要求 Python `>=3.10,<3.12`。
+本项目要求 Python `>=3.10,<3.12`。推荐使用 Python 3.10 安装, 因为部分语音依赖尚不支持 Python 3.12+ 或 3.13。
 
 从 PyPI 安装:
 
 ```bash
-uv tool install indextts2-cli
+uv tool install --python 3.10 indextts2-cli
 ```
 
 也可以使用 `pipx`:
 
 ```bash
-pipx install indextts2-cli
+pipx install --python 3.10 indextts2-cli
 ```
 
 从本地源码安装:
@@ -323,6 +323,30 @@ indextts2-cli concat --concat-file examples/batch/concat-audio.jsonl --output ex
 所有输入 WAV 的采样率, 声道数和采样宽度必须一致。
 
 ## 常见问题
+
+### Python 3.13 下安装失败
+
+如果看到类似错误:
+
+```text
+RuntimeError: Cannot install on Python version 3.13.5
+help: `numba` (v0.58.1) was included because `indextts2-cli` depends on `numba`
+```
+
+说明安装器正在用 Python 3.13 创建工具环境。`indextts2-cli` 在包元数据中声明了 `>=3.10,<3.12`, 但 PyPI 只负责托管包, 不会阻止你下载包文件。实际选择 Python 解释器和解析依赖的是 `uv`。
+
+请显式指定 Python 3.10 或 3.11:
+
+```bash
+uv tool install --python 3.10 indextts2-cli
+```
+
+如果本机没有 Python 3.10, 先安装:
+
+```bash
+uv python install 3.10
+uv tool install --python 3.10 indextts2-cli
+```
 
 ### 找不到模型资源
 

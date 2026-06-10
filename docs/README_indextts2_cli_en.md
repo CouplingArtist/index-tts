@@ -43,18 +43,18 @@ If you only need the official WebUI, continue to use the official repository doc
 
 ## Installation
 
-This project requires Python `>=3.10,<3.12`.
+This project requires Python `>=3.10,<3.12`. Python 3.10 is recommended because some speech dependencies do not support Python 3.12+ or 3.13 yet.
 
 Install from PyPI:
 
 ```bash
-uv tool install indextts2-cli
+uv tool install --python 3.10 indextts2-cli
 ```
 
 You can also use `pipx`:
 
 ```bash
-pipx install indextts2-cli
+pipx install --python 3.10 indextts2-cli
 ```
 
 Install from local source:
@@ -323,6 +323,30 @@ indextts2-cli concat --concat-file examples/batch/concat-audio.jsonl --output ex
 All input WAV files must use the same sample rate, channel count, and sample width.
 
 ## Troubleshooting
+
+### Installation fails on Python 3.13
+
+If you see an error like this:
+
+```text
+RuntimeError: Cannot install on Python version 3.13.5
+help: `numba` (v0.58.1) was included because `indextts2-cli` depends on `numba`
+```
+
+The installer is creating the tool environment with Python 3.13. `indextts2-cli` declares `>=3.10,<3.12` in package metadata, but PyPI only hosts package files. The installer, in this case `uv`, chooses the Python interpreter and resolves dependencies.
+
+Specify Python 3.10 or 3.11 explicitly:
+
+```bash
+uv tool install --python 3.10 indextts2-cli
+```
+
+If Python 3.10 is not installed, install it first:
+
+```bash
+uv python install 3.10
+uv tool install --python 3.10 indextts2-cli
+```
 
 ### Model resources are missing
 
